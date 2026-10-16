@@ -34,7 +34,7 @@ class ProtocolConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "HTTP/1.1 enabled"):
                 renderer.parse_config(config)
 
-    def test_protocol_flags_are_rendered_from_config(self):
+    def test_grpc_route_is_rendered_from_config(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location("render_protocols", SCRIPT)
         renderer = importlib.util.module_from_spec(spec)
@@ -46,6 +46,17 @@ class ProtocolConfigTests(unittest.TestCase):
         self.assertIn("protocols h1", output)
         self.assertNotIn("protocols h1 h2", output)
         self.assertNotIn("protocols h1 h2 h3", output)
+
+    def test_grpc_route_is_rendered_from_config(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("render_protocols", SCRIPT)
+        renderer = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(renderer)
+        values = renderer.DEFAULTS.copy()
+        output = renderer.render(values)
+        self.assertIn("@grpc path /ubiq.channels.v1.ChannelService/*", output)
+        self.assertIn("reverse_proxy h2c://127.0.0.1:9090", output)
 
 
 if __name__ == "__main__":
