@@ -2,6 +2,32 @@
 
 A transport-neutral event channel DSL targeting Zig 0.16, with a POSIX TCP backend for HTTP/1.1, Server-Sent Events (SSE), and WebSocket. Caddy provides the public protocol edge for HTTP/1.1, HTTP/2, and HTTP/3 while proxying requests to the Zig backend.
 
+## Protocol selection
+
+Edit `configs/protocols.yml` to enable or disable the protocols exposed by the Caddy edge:
+
+```yaml
+http1: true
+http2: true
+http3: true
+tls_mode: internal
+https_host: localhost
+https_port: 8443
+http_host: localhost
+http_port: 8081
+backend_host: 127.0.0.1
+backend_port: 8080
+```
+
+Regenerate `deploy/Caddyfile` after changing the YAML:
+
+```sh
+python3 scripts/render_protocols.py
+python3 scripts/render_protocols.py --check
+```
+
+CI checks that the committed Caddyfile matches the YAML. HTTP/2 requires HTTP/1.1 to remain enabled in this Caddy setup. Use `tls_mode: internal` for local development or `tls_mode: managed` with a public hostname and publicly trusted TLS.
+
 ## HTTP/1.1, HTTP/2, and HTTP/3 deployment
 
 The Zig process currently speaks HTTP/1.1. Caddy terminates TLS and negotiates HTTP/3 over QUIC, HTTP/2 via ALPN, or HTTP/1.1, then proxies requests to the Zig process. This preserves SSE streaming and WebSocket upgrades while providing modern HTTP protocols at the edge. The Zig listener is **not** a native HTTP/2 or HTTP/3 implementation.
