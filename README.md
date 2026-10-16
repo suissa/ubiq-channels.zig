@@ -80,7 +80,7 @@ Call gRPC Publish with `grpcurl` (from the repository root; Caddy's local certif
 
 ```sh
 grpcurl -insecure -import-path . -proto proto/channel.proto \
-  -d '{"id":"evt-1","topic":"orders.created","content_type":"application/json","payload":"{\\"order\\":42}"}' \
+  -d '{"id":"evt-1","topic":"orders.created","content_type":"application/json","payload":"{\"order\":42}"}' \
   localhost:8443 ubiq.channels.v1.ChannelService/Publish
 ```
 
