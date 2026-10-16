@@ -38,6 +38,9 @@ func TestPublishForwardsEventToHTTPBackend(t *testing.T) {
 	if response.GetFields()["accepted"].GetBoolValue() != true {
 		t.Fatalf("accepted = %v", response.GetFields()["accepted"])
 	}
+	if response.GetFields()["subscribers"].GetNumberValue() != 1 {
+		t.Fatalf("subscribers = %v, want 1", response.GetFields()["subscribers"])
+	}
 }
 
 func TestPublishRejectsMissingRequiredFields(t *testing.T) {
