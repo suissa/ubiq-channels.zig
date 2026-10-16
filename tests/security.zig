@@ -1,5 +1,5 @@
 const std = @import("std");
-const ubiq = @import("../src/root.zig");
+const ubiq = @import("ubiq");
 test "security rejects channel identity injection" {
     const app = ubiq.App.init(std.testing.allocator);
     try std.testing.expectError(error.InvalidChannelIdentity, app.channel("x\r\nX: y").transport(.sse).build());

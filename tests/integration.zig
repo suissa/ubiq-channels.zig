@@ -1,5 +1,5 @@
 const std = @import("std");
-const ubiq = @import("../src/root.zig");
+const ubiq = @import("ubiq");
 test "integration event payload survives all protocol encoders" {
     const e = ubiq.Event{ .id = "evt-1", .topic = "orders.created", .payload = "{\"order\":42}" };
     const a = try ubiq.sse.encode(std.testing.allocator, e, 1024); defer std.testing.allocator.free(a);

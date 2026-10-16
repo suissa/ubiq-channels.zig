@@ -1,5 +1,5 @@
 const std = @import("std");
-const ubiq = @import("../src/root.zig");
+const ubiq = @import("ubiq");
 test "load stress encodes 10000 events over all adapters" {
     const a = std.testing.allocator;
     var i: usize = 0;

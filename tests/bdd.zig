@@ -1,5 +1,5 @@
 const std = @import("std");
-const ubiq = @import("../src/root.zig");
+const ubiq = @import("ubiq");
 test "BDD given a customer channel when publishing then all transports are invoked" {
     const app = ubiq.App.init(std.testing.allocator);
     var c = try app.channel("entity:customer:123").transport(.sse).transport(.ws).transport(.http).build();
