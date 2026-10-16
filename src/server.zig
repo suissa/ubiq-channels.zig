@@ -258,15 +258,15 @@ fn handleConnection(server: *Server, fd: c_int) !void {
             return;
         };
         const content_type = findHeader(header, "Content-Type") orelse "application/json";
-        const body = request[header_end..];
-        const event = Event{ .id = id, .topic = topic, .content_type = content_type, .payload = body };
+        const request_body = request[header_end..];
+        const event = Event{ .id = id, .topic = topic, .content_type = content_type, .payload = request_body };
         const delivered = server.publish(event) catch {
             sendText(fd, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
             return;
         };
-        const body = try std.fmt.allocPrint(server.allocator, "{{\"accepted\":true,\"subscribers\":{d}}}", .{delivered});
-        defer server.allocator.free(body);
-        const response = try std.fmt.allocPrint(server.allocator, "HTTP/1.1 202 Accepted\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{s}", .{ body.len, body });
+        const response_body = try std.fmt.allocPrint(server.allocator, "{{\"accepted\":true,\"subscribers\":{d}}}", .{delivered});
+        defer server.allocator.free(response_body);
+        const response = try std.fmt.allocPrint(server.allocator, "HTTP/1.1 202 Accepted\r\nContent-Type: application/json\r\nContent-Length: {d}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{s}", .{ response_body.len, response_body });
         defer server.allocator.free(response);
         sendText(fd, response);
         return;
