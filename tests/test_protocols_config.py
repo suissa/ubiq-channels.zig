@@ -31,7 +31,13 @@ class ProtocolConfigTests(unittest.TestCase):
     def test_http2_requires_http1(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / "protocols.yml"
-            config.write_text("http1: false\\nhttp2: true\\nhttp3: false\\n", encoding="utf-8")
+            config.write_text(
+                """http1: false
+http2: true
+http3: false
+""",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(ValueError, "HTTP/1.1 enabled"):
                 load_renderer().parse_config(config)
 
@@ -39,7 +45,11 @@ class ProtocolConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / "protocols.yml"
             config.write_text(
-                "http1: true\\nhttp2: false\\nhttp3: false\\ngrpc: true\\n",
+                """http1: true
+http2: false
+http3: false
+grpc: true
+""",
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(ValueError, "gRPC requires http2"):
