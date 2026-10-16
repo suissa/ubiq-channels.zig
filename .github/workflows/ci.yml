@@ -24,6 +24,7 @@ jobs:
       - name: Test and build gRPC bridge
         working-directory: grpcbridge
         run: |
+          go mod tidy
           go test ./...
           go build ./...
       - name: Validate protocol config and generated Caddyfile
