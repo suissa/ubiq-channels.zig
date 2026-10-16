@@ -223,6 +223,10 @@ fn handleConnection(server: *Server, fd: c_int) !void {
     defer server.allocator.free(request);
     const header_end = (std.mem.indexOf(u8, request, "\r\n\r\n") orelse return error.InvalidRequest) + 4;
     const header = request[0 .. header_end - 4];
+    if (findHeader(header, "Transfer-Encoding") != null) {
+        sendText(fd, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        return;
+    }
     var first = std.mem.splitSequence(u8, header, "\r\n");
     const line = first.next() orelse return error.InvalidRequest;
     var parts = std.mem.splitScalar(u8, line, ' ');
@@ -297,15 +301,17 @@ fn websocketUpgrade(server: *Server, fd: c_int, request: []const u8) !void {
     _ = encoder.encode(encoded, &digest);
     const response = try std.fmt.allocPrint(server.allocator, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {s}\r\n\r\n", .{encoded});
     defer server.allocator.free(response);
-    if (!sendAll(fd, response)) return error.ConnectionClosed;
     if (!server.addClient(fd, .ws)) {
         sendText(fd, "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
         return;
     }
+    if (!sendAll(fd, response)) return error.ConnectionClosed;
     var frame_header: [2]u8 = undefined;
     while (true) {
         try recvExact(fd, &frame_header);
         const opcode = frame_header[0] & 0x0f;
+        if ((frame_header[0] & 0x70) != 0 or (frame_header[0] & 0x80) == 0)
+            return error.UnsupportedWebSocketFragment;
         const masked = (frame_header[1] & 0x80) != 0;
         if (!masked) return error.UnmaskedClientFrame;
         var payload_len: usize = frame_header[1] & 0x7f;
@@ -320,6 +326,7 @@ fn websocketUpgrade(server: *Server, fd: c_int, request: []const u8) !void {
             for (ext) |byte| payload_len = (payload_len << 8) | byte;
         }
         if (payload_len > server.config.max_payload_bytes or payload_len > 65536) return error.PayloadTooLarge;
+        if (opcode >= 8 and payload_len > 125) return error.InvalidControlFrame;
         var mask: [4]u8 = undefined;
         try recvExact(fd, &mask);
         const payload = try server.allocator.alloc(u8, payload_len);
