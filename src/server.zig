@@ -19,6 +19,8 @@ extern "c" fn accept(c_int, ?*anyopaque, ?*SockLen) c_int;
 extern "c" fn recv(c_int, *anyopaque, usize, c_int) isize;
 extern "c" fn send(c_int, *const anyopaque, usize, c_int) isize;
 extern "c" fn close(c_int) c_int;
+extern "c" fn pthread_mutex_lock(*anyopaque) c_int;
+extern "c" fn pthread_mutex_unlock(*anyopaque) c_int;
 
 const SockAddrIn = extern struct {
     family: u16,
@@ -42,7 +44,7 @@ pub const Config = struct {
 pub const Server = struct {
     allocator: std.mem.Allocator,
     config: Config,
-    mutex: std.Thread.Mutex = .{},
+    mutex: [40]u8 align(8) = [_]u8{0} ** 40,
     clients: [max_clients]?Client = [_]?Client{null} ** max_clients,
 
     pub fn init(allocator: std.mem.Allocator, config: Config) Server {
@@ -82,8 +84,8 @@ pub const Server = struct {
     }
 
     fn addClient(self: *Server, fd: c_int, kind: ClientKind) bool {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        _ = pthread_mutex_lock(@ptrCast(&self.mutex));
+        defer _ = pthread_mutex_unlock(@ptrCast(&self.mutex));
         for (&self.clients) |*slot| {
             if (slot.* == null) {
                 slot.* = .{ .fd = fd, .kind = kind };
