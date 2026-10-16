@@ -19,6 +19,7 @@ extern "c" fn accept(c_int, ?*anyopaque, ?*SockLen) c_int;
 extern "c" fn recv(c_int, *anyopaque, usize, c_int) isize;
 extern "c" fn send(c_int, *const anyopaque, usize, c_int) isize;
 extern "c" fn close(c_int) c_int;
+extern "c" fn sleep(c_uint) c_uint;
 extern "c" fn pthread_mutex_lock(*anyopaque) c_int;
 extern "c" fn pthread_mutex_unlock(*anyopaque) c_int;
 
@@ -244,7 +245,7 @@ fn handleConnection(server: *Server, fd: c_int) !void {
             return;
         }
         while (true) {
-            std.Thread.sleep(15 * std.time.ns_per_s);
+            _ = sleep(15);
             if (!server.sendToClient(fd, ": keep-alive\n\n")) break;
         }
         return;
