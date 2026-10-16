@@ -2,6 +2,7 @@
 http1: true
 http2: true
 http3: true
+grpc: true
 
 # TLS mode: "internal" for local development, "managed" for a public hostname.
 tls_mode: internal
@@ -11,3 +12,5 @@ http_host: localhost
 http_port: 8081
 backend_host: 127.0.0.1
 backend_port: 8080
+grpc_host: 127.0.0.1
+grpc_port: 9090
