@@ -20,23 +20,23 @@ caddy run --config deploy/Caddyfile
 ```
 
 Endpoints:
-- `https://localhost:8443/health` — HTTP/2-capable TLS endpoint; clients negotiate HTTP/2 when supported.
+- `https://localhost:8443/health` — TLS endpoint that negotiates HTTP/2 when the client supports it, otherwise HTTP/1.1.
 - `http://localhost:8081/health` — plaintext HTTP/1.1 endpoint.
 - `GET /events` — persistent SSE stream with event delivery and periodic comment keep-alives.
 - `GET /ws` — RFC 6455 WebSocket upgrade on the HTTP/1.1 upstream. Caddy proxies WebSocket upgrades automatically.
 - `POST /publish` — publishes the raw request body to currently connected SSE and WebSocket subscribers. Set `X-Event-Id`, `X-Event-Topic`, and `Content-Type`; the body is the event payload.
 
-For example, publish through the edge:
+Publish through the local TLS edge (the `-k` flag is only for local development with Caddy's internal certificate):
+
 ```sh
-curl -i -X POST https://localhost:8443/publish \
-  --cacert "$(caddy environ 2>/dev/null | sed -n 's/^.*CADDY_DATA_DIR=//p' | head -1)/pki/authorities/local/root.crt" \
+curl -k -i -X POST https://localhost:8443/publish \
   -H 'X-Event-Id: evt-1' \
   -H 'X-Event-Topic: orders.created' \
   -H 'Content-Type: application/json' \
   --data-binary '{"order":42}'
 ```
 
-For local development, Caddy uses its internal CA; trust that CA in the client/browser, or use `curl -k` for a quick non-production smoke check. For production, replace `localhost` in `deploy/Caddyfile` with a domain you control and configure valid TLS. Do not expose the Zig backend port directly to the internet.
+For production, replace `localhost` in `deploy/Caddyfile` with a domain you control and configure valid TLS. Do not expose the Zig backend port directly to the internet.
 
 ## TCP backend endpoints
 
@@ -79,4 +79,4 @@ The suite covers protocol encoding, fan-out, input validation, and encoding stre
 
 ## Operational limits
 
-The Zig backend uses a bounded in-memory subscriber table (128 clients), HTTP/1.1 without TLS, and a simple request parser. Caddy provides TLS and external HTTP/2 negotiation; it does not make the Zig process a native HTTP/2 server. SSE is configured for immediate proxy flushing, and WebSocket upgrade forwarding is handled by Caddy. Add authentication/authorization around `/publish`, apply connection/rate limits, and perform deployment-specific load and soak tests before public exposure. There is no durable replay, delivery acknowledgement, idempotency, or guaranteed delivery to disconnected subscribers.
+The Zig backend uses a bounded in-memory subscriber table (128 clients), HTTP/1.1 without TLS, and a simple request parser. Caddy provides TLS and external HTTP/2 negotiation; it does not make the Zig process a native HTTP/2 server. SSE is configured for immediate proxy flushing, and WebSocket upgrade forwarding is handled by Caddy over HTTP/1.1. Add authentication/authorization around `/publish`, apply connection/rate limits, and perform deployment-specific load and soak tests before public exposure. There is no durable replay, delivery acknowledgement, idempotency, or guaranteed delivery to disconnected subscribers.
