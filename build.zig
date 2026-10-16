@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
     });
     server_module.link_libc = true;
     const server_exe = b.addExecutable(.{ .name = "ubiq-server", .root_module = server_module });
+    b.installArtifact(server_exe);
     test_step.dependOn(&server_exe.step);
     test_step.dependOn(&run_unit.step);
     inline for (.{"bdd", "integration", "security", "load_stress"}) |name| {

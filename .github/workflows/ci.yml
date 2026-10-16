@@ -14,5 +14,9 @@ jobs:
           version: 0.16.0
       - name: Run Zig tests
         run: zig build test
-      - name: Validate benchmark runner syntax
-        run: python3 -m py_compile bench/benchmark.py
+      - name: Install server executable
+        run: zig build
+      - name: Live HTTP, SSE, and WebSocket smoke tests
+        run: python3 tests/live_smoke.py zig-out/bin/ubiq-server
+      - name: Validate Python scripts
+        run: python3 -m py_compile bench/benchmark.py tests/live_smoke.py
