@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package ubiq.channels.v1;
+
+option go_package = "github.com/suissa/ubiq-channels.zig/grpcbridge;main";
+
+import "google/protobuf/struct.proto";
+
+// ChannelService exposes event publishing over standard gRPC/HTTP2.
+// Publish uses google.protobuf.Struct to keep the first API version schema-flexible.
+service ChannelService {
+  rpc Publish(google.protobuf.Struct) returns (google.protobuf.Struct);
+}
