@@ -97,8 +97,8 @@ pub const Server = struct {
     }
 
     fn removeClient(self: *Server, fd: c_int) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        _ = pthread_mutex_lock(@ptrCast(&self.mutex));
+        defer _ = pthread_mutex_unlock(@ptrCast(&self.mutex));
         for (&self.clients) |*slot| {
             if (slot.*) |client| {
                 if (client.fd == fd) slot.* = null;
@@ -107,8 +107,8 @@ pub const Server = struct {
     }
 
     fn sendToClient(self: *Server, fd: c_int, bytes: []const u8) bool {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        _ = pthread_mutex_lock(@ptrCast(&self.mutex));
+        defer _ = pthread_mutex_unlock(@ptrCast(&self.mutex));
         for (self.clients) |slot| {
             if (slot) |client| {
                 if (client.fd == fd) return sendAll(fd, bytes);
@@ -123,8 +123,8 @@ pub const Server = struct {
         const ws_bytes = try websocket.encodeEvent(self.allocator, event, self.config.max_payload_bytes);
         defer self.allocator.free(ws_bytes);
         var delivered: usize = 0;
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        _ = pthread_mutex_lock(@ptrCast(&self.mutex));
+        defer _ = pthread_mutex_unlock(@ptrCast(&self.mutex));
         for (&self.clients) |*slot| {
             if (slot.*) |client| {
                 const bytes = if (client.kind == .sse) sse_bytes else ws_bytes;
