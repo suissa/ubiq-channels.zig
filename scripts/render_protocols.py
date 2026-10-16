@@ -82,7 +82,7 @@ def render(values: dict[str, str]) -> str:
     if values["http2"] == "true" or values["http3"] == "true" or values["tls_mode"] in ("internal", "managed"):
         if values["grpc"] == "true":
             https_handlers = (
-                f"    @grpc path /ubiq.channels.v1.ChannelService/*\n"
+                f"    @grpc path /ubiq.channels.v1.ChannelService/* /grpc.health.v1.Health/*\n"
                 "    handle @grpc {\n"
                 f"        reverse_proxy h2c://{values['grpc_host']}:{values['grpc_port']}\n"
                 "    }\n"
