@@ -3,7 +3,6 @@ const Event = @import("event.zig").Event;
 const sse = @import("sse.zig");
 const websocket = @import("websocket.zig");
 
-const c_int = i32;
 const SockLen = u32;
 const AF_INET: c_int = 2;
 const SOCK_STREAM: c_int = 1;
