@@ -1,0 +1,17 @@
+# TLS edge: Caddy negotiates HTTP/2 (h2) and HTTP/1.1 through ALPN.
+# For local development, this uses Caddy's locally trusted internal CA.
+# For production, replace localhost with your public DNS name and use public TLS.
+https://localhost:8443 {
+    tls internal
+    reverse_proxy 127.0.0.1:8080 {
+        # Flush each upstream write so SSE is streamed instead of buffered.
+        flush_interval -1
+    }
+}
+
+# Explicit plaintext HTTP/1.1 listener for clients that cannot use TLS.
+http://localhost:8081 {
+    reverse_proxy 127.0.0.1:8080 {
+        flush_interval -1
+    }
+}
