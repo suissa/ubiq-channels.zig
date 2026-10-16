@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -73,8 +74,16 @@ func (s *channelService) publish(ctx context.Context, request *structpb.Struct) 
 	if response.StatusCode != http.StatusAccepted {
 		return nil, status.Errorf(codes.FailedPrecondition, "channel backend returned HTTP %d", response.StatusCode)
 	}
+	var backendResult struct {
+		Accepted bool `json:"accepted"`
+		Subscribers int `json:"subscribers"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&backendResult); err != nil {
+		return nil, status.Errorf(codes.Internal, "decode channel backend response: %v", err)
+	}
 	return structpb.NewStruct(map[string]any{
-		"accepted": true,
+		"accepted": backendResult.Accepted,
+		"subscribers": float64(backendResult.Subscribers),
 		"backend_status": float64(response.StatusCode),
 	})
 }
