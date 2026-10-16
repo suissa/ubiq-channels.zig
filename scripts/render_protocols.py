@@ -53,6 +53,8 @@ def parse_config(path: Path) -> dict[str, str]:
         raise ValueError("at least one of http1, http2, http3, or grpc must be enabled")
     if values["http2"] == "true" and values["http1"] != "true":
         raise ValueError("Caddy requires HTTP/1.1 enabled when HTTP/2 is enabled")
+    if values["grpc"] == "true" and values["http2"] != "true":
+        raise ValueError("gRPC requires http2: true")
     if values["http3"] == "true" and values["tls_mode"] not in ("internal", "managed"):
         raise ValueError("HTTP/3 requires tls_mode: internal or managed")
     if values["tls_mode"] not in ("internal", "managed"):
