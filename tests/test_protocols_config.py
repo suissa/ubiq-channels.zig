@@ -1,3 +1,4 @@
+import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -6,6 +7,14 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "render_protocols.py"
+
+
+def load_renderer():
+    spec = importlib.util.spec_from_file_location("render_protocols", SCRIPT)
+    renderer = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(renderer)
+    return renderer
 
 
 class ProtocolConfigTests(unittest.TestCase):
@@ -22,39 +31,31 @@ class ProtocolConfigTests(unittest.TestCase):
     def test_http2_requires_http1(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / "protocols.yml"
+            config.write_text("http1: false\\nhttp2: true\\nhttp3: false\\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "HTTP/1.1 enabled"):
+                load_renderer().parse_config(config)
+
+    def test_grpc_requires_http2(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "protocols.yml"
             config.write_text(
-                "http1: false\nhttp2: true\nhttp3: false\n",
+                "http1: true\\nhttp2: false\\nhttp3: false\\ngrpc: true\\n",
                 encoding="utf-8",
             )
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("render_protocols", SCRIPT)
-            renderer = importlib.util.module_from_spec(spec)
-            assert spec.loader is not None
-            spec.loader.exec_module(renderer)
-            with self.assertRaisesRegex(ValueError, "HTTP/1.1 enabled"):
-                renderer.parse_config(config)
+            with self.assertRaisesRegex(ValueError, "gRPC requires http2"):
+                load_renderer().parse_config(config)
 
-    def test_grpc_route_is_rendered_from_config(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("render_protocols", SCRIPT)
-        renderer = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(renderer)
+    def test_protocol_flags_are_rendered_from_config(self):
+        renderer = load_renderer()
         values = renderer.DEFAULTS.copy()
-        values.update({"http1": "true", "http2": "false", "http3": "false"})
+        values.update({"http1": "true", "http2": "false", "http3": "false", "grpc": "false"})
         output = renderer.render(values)
         self.assertIn("protocols h1", output)
         self.assertNotIn("protocols h1 h2", output)
-        self.assertNotIn("protocols h1 h2 h3", output)
+        self.assertNotIn("@grpc path", output)
 
     def test_grpc_route_is_rendered_from_config(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("render_protocols", SCRIPT)
-        renderer = importlib.util.module_from_spec(spec)
-        assert spec.loader is not None
-        spec.loader.exec_module(renderer)
-        values = renderer.DEFAULTS.copy()
-        output = renderer.render(values)
+        output = load_renderer().render(load_renderer().DEFAULTS.copy())
         self.assertIn("@grpc path /ubiq.channels.v1.ChannelService/*", output)
         self.assertIn("reverse_proxy h2c://127.0.0.1:9090", output)
 
