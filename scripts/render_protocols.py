@@ -18,6 +18,7 @@ DEFAULTS = {
     "http1": "true",
     "http2": "true",
     "http3": "true",
+    "grpc": "true",
     "tls_mode": "internal",
     "https_host": "localhost",
     "https_port": "8443",
@@ -25,6 +26,8 @@ DEFAULTS = {
     "http_port": "8081",
     "backend_host": "127.0.0.1",
     "backend_port": "8080",
+    "grpc_host": "127.0.0.1",
+    "grpc_port": "9090",
 }
 
 
@@ -42,26 +45,26 @@ def parse_config(path: Path) -> dict[str, str]:
         if not value:
             raise ValueError(f"{path}:{line_number}: missing value for {key}")
         values[key] = value.strip("\"'")
-    for key in ("http1", "http2", "http3"):
+    for key in ("http1", "http2", "http3", "grpc"):
         if values[key].lower() not in ("true", "false"):
             raise ValueError(f"{key} must be true or false")
         values[key] = values[key].lower()
-    if not any(values[key] == "true" for key in ("http1", "http2", "http3")):
-        raise ValueError("at least one of http1, http2, or http3 must be enabled")
+    if not any(values[key] == "true" for key in ("http1", "http2", "http3", "grpc")):
+        raise ValueError("at least one of http1, http2, http3, or grpc must be enabled")
     if values["http2"] == "true" and values["http1"] != "true":
         raise ValueError("Caddy requires HTTP/1.1 enabled when HTTP/2 is enabled")
     if values["http3"] == "true" and values["tls_mode"] not in ("internal", "managed"):
         raise ValueError("HTTP/3 requires tls_mode: internal or managed")
     if values["tls_mode"] not in ("internal", "managed"):
         raise ValueError("tls_mode must be internal or managed")
-    for key in ("https_port", "http_port", "backend_port"):
+    for key in ("https_port", "http_port", "backend_port", "grpc_port"):
         try:
             port = int(values[key])
         except ValueError as exc:
             raise ValueError(f"{key} must be an integer port") from exc
         if not 1 <= port <= 65535:
             raise ValueError(f"{key} must be between 1 and 65535")
-    for key in ("https_host", "http_host", "backend_host"):
+    for key in ("https_host", "http_host", "backend_host", "grpc_host"):
         if any(ch.isspace() for ch in values[key]) or not values[key]:
             raise ValueError(f"{key} must be a non-empty hostname or IP without whitespace")
     return values
@@ -75,13 +78,30 @@ def render(values: dict[str, str]) -> str:
     tls_directive = "    tls internal\n" if values["tls_mode"] == "internal" else ""
     https_site = ""
     if values["http2"] == "true" or values["http3"] == "true" or values["tls_mode"] in ("internal", "managed"):
+        if values["grpc"] == "true":
+            https_handlers = (
+                f"    @grpc path /ubiq.channels.v1.ChannelService/*\n"
+                "    handle @grpc {\n"
+                f"        reverse_proxy h2c://{values['grpc_host']}:{values['grpc_port']}\n"
+                "    }\n"
+                "    handle {\n"
+                f"        reverse_proxy {values['backend_host']}:{values['backend_port']} {{\n"
+                "            # Flush each upstream write so SSE is streamed instead of buffered.\n"
+                "            flush_interval -1\n"
+                "        }\n"
+                "    }\n"
+            )
+        else:
+            https_handlers = (
+                f"    reverse_proxy {values['backend_host']}:{values['backend_port']} {{\n"
+                "        # Flush each upstream write so SSE is streamed instead of buffered.\n"
+                "        flush_interval -1\n"
+                "    }\n"
+            )
         https_site = (
             f"https://{values['https_host']}:{values['https_port']} {{\n"
             f"{tls_directive}"
-            f"    reverse_proxy {values['backend_host']}:{values['backend_port']} {{\n"
-            "        # Flush each upstream write so SSE is streamed instead of buffered.\n"
-            "        flush_interval -1\n"
-            "    }\n"
+            f"{https_handlers}"
             "}\n"
         )
     http_site = (
