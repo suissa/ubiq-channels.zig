@@ -1,18 +1,48 @@
 # ubiq-channels.zig
 
-A transport-neutral event channel DSL targeting Zig 0.16, with protocol codecs and a POSIX TCP server for HTTP/1.1, Server-Sent Events (SSE), and WebSocket.
+A transport-neutral event channel DSL targeting Zig 0.16, with a POSIX TCP backend for HTTP/1.1, Server-Sent Events (SSE), and WebSocket. The repository also includes a Caddy edge configuration that exposes HTTP/2 over TLS and HTTP/1.1, while proxying to the Zig backend.
 
-## TCP server
+## HTTP/2 and HTTP/1.1 deployment
 
-The server exposes these endpoints:
-- `GET /health` returns a health response.
-- `GET /events` opens a persistent SSE stream with event delivery and periodic comment keep-alives.
-- `GET /ws` performs the RFC 6455 HTTP Upgrade handshake and keeps a WebSocket session open. Client frames must be masked; close and ping/pong control frames are handled.
-- `POST /publish` publishes the raw request body to currently connected SSE and WebSocket subscribers. Set `X-Event-Id`, `X-Event-Topic`, and `Content-Type`; the body is the event payload.
+The Zig process currently speaks HTTP/1.1. HTTP/2 is provided at the edge by Caddy, which terminates TLS, negotiates HTTP/2 or HTTP/1.1 via ALPN, and proxies requests to the Zig process. This is a deliberate protocol boundary: the current Zig listener is **not** a native HTTP/2 implementation.
+
+Run the Zig server on loopback:
+
+```sh
+zig build
+./zig-out/bin/ubiq-server
+```
+
+Run Caddy with the included configuration (install Caddy first):
+
+```sh
+caddy run --config deploy/Caddyfile
+```
+
+Endpoints:
+- `https://localhost:8443/health` — HTTP/2-capable TLS endpoint; clients negotiate HTTP/2 when supported.
+- `http://localhost:8081/health` — plaintext HTTP/1.1 endpoint.
+- `GET /events` — persistent SSE stream with event delivery and periodic comment keep-alives.
+- `GET /ws` — RFC 6455 WebSocket upgrade on the HTTP/1.1 upstream. Caddy proxies WebSocket upgrades automatically.
+- `POST /publish` — publishes the raw request body to currently connected SSE and WebSocket subscribers. Set `X-Event-Id`, `X-Event-Topic`, and `Content-Type`; the body is the event payload.
+
+For example, publish through the edge:
+```sh
+curl -i -X POST https://localhost:8443/publish \
+  --cacert "$(caddy environ 2>/dev/null | sed -n 's/^.*CADDY_DATA_DIR=//p' | head -1)/pki/authorities/local/root.crt" \
+  -H 'X-Event-Id: evt-1' \
+  -H 'X-Event-Topic: orders.created' \
+  -H 'Content-Type: application/json' \
+  --data-binary '{"order":42}'
+```
+
+For local development, Caddy uses its internal CA; trust that CA in the client/browser, or use `curl -k` for a quick non-production smoke check. For production, replace `localhost` in `deploy/Caddyfile` with a domain you control and configure valid TLS. Do not expose the Zig backend port directly to the internet.
+
+## TCP backend endpoints
 
 Exported API: `ubiq.server.Server`. Configure the listener with `ubiq.server.Config` and call `listenAndServe()` from an executable that links libc.
 
-Example requests:
+Direct backend requests:
 ```sh
 curl -N http://127.0.0.1:8080/events
 curl -i -X POST http://127.0.0.1:8080/publish \
@@ -49,4 +79,4 @@ The suite covers protocol encoding, fan-out, input validation, and encoding stre
 
 ## Operational limits
 
-This is an initial server implementation, not a hardened internet-facing deployment. It uses a bounded in-memory subscriber table (128 clients), HTTP/1.1 without TLS, and a simple request parser. Put it behind a TLS reverse proxy, add authentication/authorization around `/publish`, apply connection/rate limits, and perform deployment-specific load and soak tests before public exposure. There is no durable replay, delivery acknowledgement, idempotency, or guaranteed delivery to disconnected subscribers.
+The Zig backend uses a bounded in-memory subscriber table (128 clients), HTTP/1.1 without TLS, and a simple request parser. Caddy provides TLS and external HTTP/2 negotiation; it does not make the Zig process a native HTTP/2 server. SSE is configured for immediate proxy flushing, and WebSocket upgrade forwarding is handled by Caddy. Add authentication/authorization around `/publish`, apply connection/rate limits, and perform deployment-specific load and soak tests before public exposure. There is no durable replay, delivery acknowledgement, idempotency, or guaranteed delivery to disconnected subscribers.
