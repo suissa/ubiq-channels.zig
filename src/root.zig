@@ -7,4 +7,5 @@ pub const PublishReport = channels.Report;
 pub const sse = @import("sse.zig");
 pub const websocket = @import("websocket.zig");
 pub const http = @import("http.zig");
-test { _ = @import("event.zig"); _ = @import("sse.zig"); _ = @import("websocket.zig"); _ = @import("http.zig"); _ = @import("channel.zig"); }
+pub const server = @import("server.zig");
+test { _ = @import("event.zig"); _ = @import("sse.zig"); _ = @import("websocket.zig"); _ = @import("http.zig"); _ = @import("channel.zig"); _ = @import("server.zig"); }

@@ -20,6 +20,15 @@ pub fn encodeTextFrame(a: std.mem.Allocator, payload: []const u8, max_bytes: usi
     return out;
 }
 
+pub fn encodeControlFrame(a: std.mem.Allocator, opcode: u8, payload: []const u8) ![]u8 {
+    if (opcode > 15 or payload.len > 125) return error.InvalidControlFrame;
+    const out = try a.alloc(u8, 2 + payload.len);
+    out[0] = 0x80 | opcode;
+    out[1] = @intCast(payload.len);
+    @memcpy(out[2..], payload);
+    return out;
+}
+
 pub fn encodeEvent(a: std.mem.Allocator, e: Event, max_bytes: usize) ![]u8 {
     try e.validate(max_bytes);
     return encodeTextFrame(a, e.payload, max_bytes);

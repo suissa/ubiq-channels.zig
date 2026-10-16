@@ -7,7 +7,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const unit = b.addTest(.{ .root_module = lib_module });
+    const unit = b.addTest(.{ .root_module = lib_module, .link_libc = true });
     const run_unit = b.addRunArtifact(unit);
     const test_step = b.step("test", "Run all test suites");
     test_step.dependOn(&run_unit.step);
@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{.{ .name = "ubiq", .module = lib_module }},
         });
-        const artifact = b.addTest(.{ .root_module = module });
+        const artifact = b.addTest(.{ .root_module = module, .link_libc = true });
         const run = b.addRunArtifact(artifact);
         test_step.dependOn(&run.step);
     }
