@@ -50,6 +50,7 @@ In a second terminal, start the optional gRPC bridge (Go 1.24+; it forwards to t
 
 ```sh
 cd grpcbridge
+go mod tidy
 UBIQ_GRPC_ADDR=127.0.0.1:9090 UBIQ_HTTP_BACKEND=http://127.0.0.1:8080/publish go run .
 ```
 
