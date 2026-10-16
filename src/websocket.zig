@@ -65,7 +65,7 @@ test "WebSocket switches to the 64-bit extended length at 65536 bytes" {
     defer std.testing.allocator.free(out);
     try std.testing.expectEqual(@as(u8, 127), out[1]);
     try std.testing.expectEqual(@as(u8, 0), out[2]);
-    try std.testing.expectEqual(@as(u8, 1), out[3]);
+    try std.testing.expectEqual(@as(u8, 1), out[7]);
     try std.testing.expectEqual(@as(u8, 0), out[8]);
     try std.testing.expectEqual(@as(u8, 0), out[9]);
     try std.testing.expectEqual(@as(usize, 65546), out.len);
