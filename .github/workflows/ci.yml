@@ -18,5 +18,9 @@ jobs:
         run: zig build
       - name: Live HTTP, SSE, and WebSocket smoke tests
         run: python3 tests/live_smoke.py zig-out/bin/ubiq-server
+      - name: Validate protocol config and generated Caddyfile
+        run: |
+          python3 scripts/render_protocols.py --check
+          python3 -m unittest tests/test_protocols_config.py
       - name: Validate Python scripts
-        run: python3 -m py_compile bench/benchmark.py tests/live_smoke.py
+        run: python3 -m py_compile bench/benchmark.py tests/live_smoke.py scripts/render_protocols.py tests/test_protocols_config.py
